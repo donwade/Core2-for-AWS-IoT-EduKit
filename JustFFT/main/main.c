@@ -17,8 +17,9 @@
 #include "sk6812_test.h"
 #include "mic_fft_test.h"
 
-static void brightness_slider_event_cb(lv_obj_t * slider, lv_event_t event);
-static void strength_slider_event_cb(lv_obj_t * slider, lv_event_t event);
+//static void brightness_slider_event_cb(lv_obj_t * slider, lv_event_t event);
+//static void strength_slider_event_cb(lv_obj_t * slider, lv_event_t event);
+
 static void led_event_handler(lv_obj_t * obj, lv_event_t event);
 
 static void speakerTask(void *arg);
@@ -60,27 +61,35 @@ void app_main(void)
     lv_label_set_align(time_label, LV_LABEL_ALIGN_LEFT);
 #endif
 
-    lv_obj_t * mpu6886_lable = lv_label_create(lv_scr_act(), NULL);
+    lv_obj_t * mpu6886_label = lv_label_create(lv_scr_act(), NULL);
 
 #if NEED_TIME_DISPLAY
-    lv_obj_align(mpu6886_lable, time_label, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 5);
+    lv_obj_align(mpu6886_label, time_label, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 5);
 #endif
 
+#if NEED_TOUCH_DISPLAY
     lv_obj_t * touch_label = lv_label_create(lv_scr_act(), NULL);
-    lv_obj_align(touch_label, mpu6886_lable, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 5);
+    lv_obj_align(touch_label, mpu6886_label, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 5);
+#endif
 
+#if NEED_PMU_DISPLAY
     lv_obj_t * pmu_label = lv_label_create(lv_scr_act(), NULL);
-    lv_obj_align(pmu_label, touch_label, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 5);
+    lv_obj_align(pmu_label, mpu6886_label, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 5);
+#endif
 
+#if NEED_LED_DISPLAY
     lv_obj_t * led_label = lv_label_create(lv_scr_act(), NULL);
-    lv_obj_align(led_label, pmu_label, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 5);
+    lv_obj_align(led_label, mpu6886_label, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 5);
     lv_label_set_text(led_label, "Power LED & SK6812");
+#endif
 
+#if NEED_TOGGLE_DISPLAY
     lv_obj_t *sw1 = lv_switch_create(lv_scr_act(), NULL);
     lv_obj_set_size(sw1, 60, 20);
     lv_obj_align(sw1, led_label, LV_ALIGN_OUT_RIGHT_MID, 10, 0);
     lv_obj_set_event_cb(sw1, led_event_handler);
     lv_switch_on(sw1, LV_ANIM_ON);
+#endif
 
     Core2ForAWS_LED_Enable(1);
     sk6812TaskResume();
@@ -119,20 +128,26 @@ void app_main(void)
 
     char label_stash[200];
     for (;;) {
+
+#if NEED_TIME_DISPLAY
         BM8563_GetTime(&date);
         sprintf(label_stash, "Time: %d-%02d-%02d %02d:%02d:%02d\r\n",
                 date.year, date.month, date.day, date.hour, date.minute, date.second);
         xSemaphoreTake(xGuiSemaphore, portMAX_DELAY);
         lv_label_set_text(time_label, label_stash);
         xSemaphoreGive(xGuiSemaphore);
+#endif
 
+#if NEED_ACCEL_DISPLAY
         float ax, ay, az;
         MPU6886_GetAccelData(&ax, &ay, &az);
         sprintf(label_stash, "MPU6886 Acc x: %.2f, y: %.2f, z: %.2f\r\n", ax, ay, az);
         xSemaphoreTake(xGuiSemaphore, portMAX_DELAY);
-        lv_label_set_text(mpu6886_lable, label_stash);
+        lv_label_set_text(mpu6886_label, label_stash);
         xSemaphoreGive(xGuiSemaphore);
+#endif
 
+#if NEED_TOUCH_DISPLAY
         uint16_t x, y;
         bool press;
         FT6336U_GetTouch(&x, &y, &press);
@@ -140,14 +155,18 @@ void app_main(void)
         xSemaphoreTake(xGuiSemaphore, portMAX_DELAY);
         lv_label_set_text(touch_label, label_stash);
         xSemaphoreGive(xGuiSemaphore);
+#endif
 
+#if NEED_PMU_DISPLAY
         sprintf(label_stash, "Bat %.3f V, %.3f mA\r\n", Core2ForAWS_PMU_GetBatVolt(), Core2ForAWS_PMU_GetBatCurrent());
         xSemaphoreTake(xGuiSemaphore, portMAX_DELAY);
         lv_label_set_text(pmu_label, label_stash);
         xSemaphoreGive(xGuiSemaphore);
+#endif
 
         vTaskDelay(pdMS_TO_TICKS(100));
 
+#if NEED_BUTTON_PROCESS
         if (Button_WasPressed(button_left)) {
             printf("button left press\r\n");
         }
@@ -157,6 +176,8 @@ void app_main(void)
         if (Button_WasLongPress(button_right, 500)) {
             printf("button right long pressed\r\n");
         }
+#endif
+
     }
 }
 
