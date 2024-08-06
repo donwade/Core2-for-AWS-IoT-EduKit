@@ -40,7 +40,10 @@ void app_main(void)
     sdcardTest();
     sk6812Test();
 
+#if NEED_BEEP_BOOP
     xTaskCreatePinnedToCore(speakerTask, "speak", 4096 * 2, NULL, 4, &speaker_handle, 1);
+#endif
+
     xTaskCreatePinnedToCore(microphoneTask, "microphoneTask", 4096 * 2, NULL, 1, &mic_handle, 1);
     rtc_date_t date;
 
@@ -208,6 +211,7 @@ static void led_event_handler(lv_obj_t * obj, lv_event_t event) {
     }
 }
 
+#if NEED_BEEP_BOOP
 static void speakerTask(void *arg) {
     Speaker_Init();
     Core2ForAWS_Speaker_Enable(1);
@@ -224,6 +228,7 @@ static void speakerTask(void *arg) {
     }
     vTaskDelete(NULL);
 }
+#endif
 
 static void ateccTask(void *arg) {
     atecc_test();
