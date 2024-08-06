@@ -17,8 +17,9 @@
 #include "sk6812_test.h"
 #include "mic_fft_test.h"
 
-static void brightness_slider_event_cb(lv_obj_t * slider, lv_event_t event);
-static void strength_slider_event_cb(lv_obj_t * slider, lv_event_t event);
+//static void brightness_slider_event_cb(lv_obj_t * slider, lv_event_t event);
+//static void strength_slider_event_cb(lv_obj_t * slider, lv_event_t event);
+
 static void led_event_handler(lv_obj_t * obj, lv_event_t event);
 
 static void speakerTask(void *arg);
@@ -53,32 +54,46 @@ void app_main(void)
 
     xSemaphoreTake(xGuiSemaphore, portMAX_DELAY);
 
+#if NEED_TIME_DISPLAY
     lv_obj_t * time_label = lv_label_create(lv_scr_act(), NULL);
     lv_obj_set_pos(time_label, 10, 5);
     lv_label_set_align(time_label, LV_LABEL_ALIGN_LEFT);
+#endif
 
-    lv_obj_t * mpu6886_lable = lv_label_create(lv_scr_act(), NULL);
-    lv_obj_align(mpu6886_lable, time_label, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 5);
+    lv_obj_t * mpu6886_label = lv_label_create(lv_scr_act(), NULL);
 
+#if NEED_TIME_DISPLAY
+    lv_obj_align(mpu6886_label, time_label, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 5);
+#endif
+
+#if NEED_TOUCH_DISPLAY
     lv_obj_t * touch_label = lv_label_create(lv_scr_act(), NULL);
-    lv_obj_align(touch_label, mpu6886_lable, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 5);
+    lv_obj_align(touch_label, mpu6886_label, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 5);
+#endif
 
+#if NEED_PMU_DISPLAY
     lv_obj_t * pmu_label = lv_label_create(lv_scr_act(), NULL);
-    lv_obj_align(pmu_label, touch_label, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 5);
+    lv_obj_align(pmu_label, mpu6886_label, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 5);
+#endif
 
+#if NEED_LED_DISPLAY
     lv_obj_t * led_label = lv_label_create(lv_scr_act(), NULL);
-    lv_obj_align(led_label, pmu_label, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 5);
+    lv_obj_align(led_label, mpu6886_label, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 5);
     lv_label_set_text(led_label, "Power LED & SK6812");
-    
+#endif
+
+#if NEED_TOGGLE_DISPLAY
     lv_obj_t *sw1 = lv_switch_create(lv_scr_act(), NULL);
     lv_obj_set_size(sw1, 60, 20);
     lv_obj_align(sw1, led_label, LV_ALIGN_OUT_RIGHT_MID, 10, 0);
     lv_obj_set_event_cb(sw1, led_event_handler);
     lv_switch_on(sw1, LV_ANIM_ON);
+#endif
 
     Core2ForAWS_LED_Enable(1);
     sk6812TaskResume();
 
+#if NEED_BRIGHTNESS
     lv_obj_t * brightness_label = lv_label_create(lv_scr_act(), NULL);
     lv_obj_align(brightness_label, led_label, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 5);
 
@@ -91,7 +106,9 @@ void app_main(void)
     lv_obj_set_event_cb(brightness_slider, brightness_slider_event_cb);
     lv_slider_set_value(brightness_slider, 50, LV_ANIM_OFF);
     lv_slider_set_range(brightness_slider, 30, 100);
+#endif
 
+#if NEED_MOTOR
     lv_obj_t * motor_label = lv_label_create(lv_scr_act(), NULL);
     lv_obj_align(motor_label, brightness_label, LV_ALIGN_OUT_RIGHT_MID, 20, 0);
     lv_label_set_text(motor_label, "Motor strength");
@@ -102,6 +119,7 @@ void app_main(void)
     lv_obj_set_event_cb(strength_slider, strength_slider_event_cb);
     lv_slider_set_value(strength_slider, 0, LV_ANIM_OFF);
     lv_slider_set_range(strength_slider, 0, 100);
+#endif
 
     xSemaphoreGive(xGuiSemaphore);
 
@@ -109,20 +127,26 @@ void app_main(void)
 
     char label_stash[200];
     for (;;) {
+
+#if NEED_TIME_DISPLAY
         BM8563_GetTime(&date);
         sprintf(label_stash, "Time: %d-%02d-%02d %02d:%02d:%02d\r\n",
                 date.year, date.month, date.day, date.hour, date.minute, date.second);
         xSemaphoreTake(xGuiSemaphore, portMAX_DELAY);
         lv_label_set_text(time_label, label_stash);
         xSemaphoreGive(xGuiSemaphore);
+#endif
 
+#if NEED_ACCEL_DISPLAY
         float ax, ay, az;
         MPU6886_GetAccelData(&ax, &ay, &az);
         sprintf(label_stash, "MPU6886 Acc x: %.2f, y: %.2f, z: %.2f\r\n", ax, ay, az);
         xSemaphoreTake(xGuiSemaphore, portMAX_DELAY);
-        lv_label_set_text(mpu6886_lable, label_stash);
+        lv_label_set_text(mpu6886_label, label_stash);
         xSemaphoreGive(xGuiSemaphore);
+#endif
 
+#if NEED_TOUCH_DISPLAY
         uint16_t x, y;
         bool press;
         FT6336U_GetTouch(&x, &y, &press);
@@ -130,12 +154,15 @@ void app_main(void)
         xSemaphoreTake(xGuiSemaphore, portMAX_DELAY);
         lv_label_set_text(touch_label, label_stash);
         xSemaphoreGive(xGuiSemaphore);
+#endif
 
+#if NEED_PMU_DISPLAY
         sprintf(label_stash, "Bat %.3f V, %.3f mA\r\n", Core2ForAWS_PMU_GetBatVolt(), Core2ForAWS_PMU_GetBatCurrent());
         xSemaphoreTake(xGuiSemaphore, portMAX_DELAY);
         lv_label_set_text(pmu_label, label_stash);
         xSemaphoreGive(xGuiSemaphore);
-        
+#endif
+
         vTaskDelay(pdMS_TO_TICKS(100));
 
         if (Button_WasPressed(button_left)) {
@@ -150,17 +177,21 @@ void app_main(void)
     }
 }
 
+#if NEED_BRIGHTNESS
 static void brightness_slider_event_cb(lv_obj_t * slider, lv_event_t event) {
     if(event == LV_EVENT_VALUE_CHANGED) {
         Core2ForAWS_Display_SetBrightness(lv_slider_get_value(slider));
     }
 }
+#endif
 
+#if NEED_MOTOR
 static void strength_slider_event_cb(lv_obj_t * slider, lv_event_t event) {
     if(event == LV_EVENT_VALUE_CHANGED) {
         Core2ForAWS_Motor_SetStrength(lv_slider_get_value(slider));
     }
 }
+#endif
 
 static void led_event_handler(lv_obj_t * obj, lv_event_t event) {
     if(event == LV_EVENT_VALUE_CHANGED) {
@@ -214,7 +245,7 @@ static void sdcardTest() {
     if (ret != ESP_OK) {
         ESP_LOGE("sdcard", "Failed to initialize the sd card");
         return;
-    } 
+    }
 
     ESP_LOGI("SDCARD", "Success to initialize the sd card");
     sdmmc_card_print_info(stdout, card);
