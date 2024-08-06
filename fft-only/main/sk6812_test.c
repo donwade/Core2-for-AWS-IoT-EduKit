@@ -28,7 +28,8 @@ void sk6812ShowTask(void *arg) {
         }
 
         for (uint8_t i = 0; i < 10; i++) {
-            Core2ForAWS_Sk6812_SetColor(i, 0x00ff00);
+            //Core2ForAWS_Sk6812_SetColor(i, 0x00ff00);
+            Core2ForAWS_Sk6812_SetColor  (i, 0x000f00);
             Core2ForAWS_Sk6812_Show();
 
             vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -40,8 +41,10 @@ void sk6812ShowTask(void *arg) {
             vTaskDelay(100 / portTICK_PERIOD_MS);
         }
 
-        Core2ForAWS_Sk6812_SetSideColor(SK6812_SIDE_LEFT, 0x00ff00);
-        Core2ForAWS_Sk6812_SetSideColor(SK6812_SIDE_RIGHT, 0xff0000);
+        //Core2ForAWS_Sk6812_SetSideColor(SK6812_SIDE_LEFT, 0x00ff00);
+        //Core2ForAWS_Sk6812_SetSideColor(SK6812_SIDE_RIGHT, 0xff0000);
+        Core2ForAWS_Sk6812_SetSideColor(SK6812_SIDE_LEFT, 0x000f00);
+        Core2ForAWS_Sk6812_SetSideColor(SK6812_SIDE_RIGHT, 0x0f0000);
         Core2ForAWS_Sk6812_Show();
 
         for (uint8_t i = 40; i > 0; i--) {
@@ -63,6 +66,6 @@ void sk6812TaskSuspend() {
 
 void sk6812TaskResume() {
     xSemaphoreTake(lock, portMAX_DELAY);
-    stop_show = false;    
+    stop_show = false;
     xSemaphoreGive(lock);
 }
